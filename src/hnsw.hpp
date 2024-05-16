@@ -24,12 +24,13 @@ namespace HNSWLab
         int id;
         int level;
         std::vector<std::vector<int>> neighbors; // 表示第lc层中节点q的邻居
+        node(){};
     };
 
     class HNSW : public AlgorithmInterface
     {
     private:
-        std::vector<node> nodes;
+        std::vector<node*> nodes;
         int entry_point = -1;
         const int dim = 128;
 
@@ -54,29 +55,28 @@ namespace HNSWLab
      */
     void HNSW::insert(const int *item, int label)
     {
-      //  std::cout<<"item"<<item<<" "<<label<<std::endl;
+        //  std::cout<<"item"<<item<<" "<<label<<std::endl;
         std::vector<int> w;
         int ep = this->entry_point;
 
-        if (ep == -1){
-            node n;
-            n.data = item;
-            n.id = label;
-            n.level = 0;
-            n.neighbors.resize(1);
+        node* n=new node();
+        n->data = item;
+        n->id = label;
+
+        if (ep == -1)
+        {
+            n->level = 0;
+            n->neighbors.resize(1);
             nodes.push_back(n);
             entry_point = label;
             return;
         }
 
-        int max_level = nodes[ep].level;
+        int max_level = nodes[ep]->level;
         int l = get_random_level();
-        node n;
 
-        n.data = item;
-        n.id = label;
-        n.level = l;
-        n.neighbors.resize(l + 1);
+        n->level = l;
+        n->neighbors.resize(l + 1);
         nodes.push_back(n);
         int i = max_level;
         for (; i > l; i--)
@@ -85,28 +85,27 @@ namespace HNSWLab
             ep = w[0];
         }
 
-        for ( ;i >= 0; i--)
+        for (; i >= 0; i--)
         {
             // std::cout<<"ep level"<<nodes[ep].level;
             // std::cout<<"  i level"<<i<<std::endl;
 
             w = search_layer(item, ep, ef_construction, i);
 
-            n.neighbors[i] = select_neighbors(item, w, M, i); // 返回的是有序的
-           // w= n.neighbors[i];
-            ep = n.neighbors[i][0]; 
+            n->neighbors[i] = select_neighbors(item, w, M, i); // 返回的是有序的
+            w= n->neighbors[i];
+            ep = n->neighbors[i][0];
 
             for (int j = 0; j < w.size(); j++)
             {
-                nodes[w[j]].neighbors[i].push_back(label);
-              //  std::cout<<"w[j] "<<w[j]<<std::endl;
-                if (nodes[w[j]].neighbors[i].size() > M_max)
+                nodes[w[j]]->neighbors[i].push_back(label);
+                //  std::cout<<"w[j] "<<w[j]<<std::endl;
+                if (nodes[w[j]]->neighbors[i].size() > M_max)
                 {
-                   // std::cout<<nodes[w[j]].neighbors[i].size()<<" "<<M_max<<std::endl;
-                    nodes[w[j]].neighbors[i] = select_neighbors(nodes[w[j]].data, nodes[w[j]].neighbors[i], M_max, i);
+                    // std::cout<<nodes[w[j]].neighbors[i].size()<<" "<<M_max<<std::endl;
+                    nodes[w[j]]->neighbors[i] = select_neighbors(nodes[w[j]]->data, nodes[w[j]]->neighbors[i], M_max, i);
                 }
             }
-            
         }
 
         if (l > max_level)
@@ -114,9 +113,8 @@ namespace HNSWLab
             max_level = l;
             entry_point = label;
         }
-        
-        //std::cout<<"push:"<<label<<" "<<nodes[label].data<<std::endl;
 
+        // std::cout<<"push:"<<label<<" "<<nodes[label].data<<std::endl;
     }
 
     /**
@@ -132,7 +130,7 @@ namespace HNSWLab
         std::vector<int> res;
         std::vector<int> w;
         int ep = this->entry_point;
-        int max_level = nodes[ep].level;
+        int max_level = nodes[ep]->level;
         for (int i = max_level; i > 0; i--)
         {
             w = search_layer(query, ep, 1, i);
@@ -156,13 +154,13 @@ namespace HNSWLab
             return a.first > b.first;
         };
 
-        std::priority_queue<std::pair<long, int>, std::vector<std::pair<long, int>>, decltype(comparew)> w(comparew);//大顶堆
-        std::priority_queue<std::pair<long, int>, std::vector<std::pair<long, int>>, decltype(comparec)> c(comparec);//小顶堆
+        std::priority_queue<std::pair<long, int>, std::vector<std::pair<long, int>>, decltype(comparew)> w(comparew); // 大顶堆
+        std::priority_queue<std::pair<long, int>, std::vector<std::pair<long, int>>, decltype(comparec)> c(comparec); // 小顶堆
         std::unordered_set<int> visited;
 
         visited.insert(ep);
-        c.push(std::make_pair(l2distance(item, nodes[ep].data, dim), ep));
-        w.push(std::make_pair(l2distance(item, nodes[ep].data, dim), ep));
+        c.push(std::make_pair(l2distance(item, nodes[ep]->data, dim), ep));
+        w.push(std::make_pair(l2distance(item, nodes[ep]->data, dim), ep));
 
         while (!c.empty())
         {
@@ -176,13 +174,13 @@ namespace HNSWLab
             // if(nodes[q.second].neighbors.size() <=level){
             //     std::cout<<"error"<<std::endl;
             // }
-            for (int i = 0; i < nodes[q.second].neighbors[level].size(); i++)
+            for (int i = 0; i < nodes[q.second]->neighbors[level].size(); i++)
             {
-                int id = nodes[q.second].neighbors[level][i];
+                int id = nodes[q.second]->neighbors[level][i];
                 if (visited.find(id) == visited.end())
                 {
                     visited.insert(id);
-                    long dis = l2distance(item, nodes[id].data, dim);
+                    long dis = l2distance(item, nodes[id]->data, dim);
                     if (w.size() < ef)
                     {
                         w.push(std::make_pair(dis, id));
@@ -198,13 +196,13 @@ namespace HNSWLab
         }
         std::vector<int> res;
         // std::cout<<w.size()<<" "<<ef<<std::endl;
-        while (!w.empty()&&res.size() <ef)
+        while (!w.empty() && res.size() < ef)
         {
-           // std::cout<<w.top().first<<std::endl;
+            // std::cout<<w.top().first<<std::endl;
             res.push_back(w.top().second);
             w.pop();
         }
-      //  std::cout<<std::endl;
+        //  std::cout<<std::endl;
         return res;
     }
 
@@ -218,17 +216,17 @@ namespace HNSWLab
 
         for (int i = 0; i < w.size(); i++)
         {
-            //std::cout<<i<<" "<<w[i]<<" "<<nodes[w[i]].data<<std::endl;
-            q.push(std::make_pair(l2distance(item, nodes[w[i]].data, dim), w[i]));
+            // std::cout<<i<<" "<<w[i]<<" "<<nodes[w[i]].data<<std::endl;
+            q.push(std::make_pair(l2distance(item, nodes[w[i]]->data, dim), w[i]));
         }
         std::vector<int> res;
         while (!q.empty() && res.size() < ef)
         {
-          //  std::cout<<q.top().first<<std::endl;
+            //  std::cout<<q.top().first<<std::endl;
             res.push_back(q.top().second);
             q.pop();
         }
-       // std::cout<<std::endl;
+        // std::cout<<std::endl;
 
         return res;
     }
