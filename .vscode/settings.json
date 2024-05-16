@@ -106,12 +106,22 @@
     "ostream": "cpp",
     "stdexcept": "cpp",
     "streambuf": "cpp",
-    "typeinfo": "cpp"
+    "typeinfo": "cpp",
+    "condition_variable": "cpp",
+    "mutex": "cpp",
+    "semaphore": "cpp",
+    "stop_token": "cpp",
+    "thread": "cpp"
   },
   "makefile.launchConfigurations": [
     {
       "cwd": "/home/Lab2-handout-2",
       "binaryPath": "/home/Lab2-handout-2/hnsw",
+      "binaryArgs": []
+    },
+    {
+      "cwd": "/home/Lab2-handout-2",
+      "binaryPath": "/home/Lab2-handout-2/test_prog",
       "binaryArgs": []
     }
   ]

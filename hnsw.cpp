@@ -50,9 +50,9 @@ int main() {
         vector<int> test_gnd = hnsw.query(query + i * query_vec_dim, gnd_vec_dim);
         test_gnd_l.push_back(test_gnd);
     }
-    single_query_time = query_record.get_elapsed_time_micro() / query_n_vec * 1e-3;
+    single_query_time = query_record.get_elapsed_time_micro() / query_n_vec;
 
     double recall = count_recall(gnd_n_vec, gnd_vec_dim, test_gnd_l, gnd);
-    printf("average recall: %.3f, single query time %.1f ms\n", recall, single_query_time);
+    printf("average recall: %.3f, single query time %.1f μs\n", recall, single_query_time);
     return 0;
 }

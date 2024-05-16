@@ -43,7 +43,7 @@ namespace HNSWLab
         std::vector<int> query(const int *query, int k);
 
         std::vector<int> search_layer(const int *item, int ep, int ef, int level);
-        std::vector<int> select_neighbors(const int *item, const std::vector<int> &w, int ef, int level);
+        std::vector<int> select_neighbors(const int *item, std::vector<int> &w, int ef, int level);
 
         ~HNSW(){};
     };
@@ -103,7 +103,18 @@ namespace HNSWLab
                 if (nodes[w[j]]->neighbors[i].size() > M_max)
                 {
                     // std::cout<<nodes[w[j]].neighbors[i].size()<<" "<<M_max<<std::endl;
-                    nodes[w[j]]->neighbors[i] = select_neighbors(nodes[w[j]]->data, nodes[w[j]]->neighbors[i], M_max, i);
+                    //删除nodes[w[j]]->neighbors[i][M_max+1]这个点的邻居中的label
+                    std::vector<int> temp=select_neighbors(nodes[w[j]]->data, nodes[w[j]]->neighbors[i], M_max, i);
+                    int deleteNeighbor = nodes[w[j]]->neighbors[i][M_max];
+                    for (int k = 0; k < nodes[deleteNeighbor]->neighbors[i].size(); k++)
+                    {
+                        if (nodes[deleteNeighbor]->neighbors[i][k] == label)
+                        {
+                            nodes[deleteNeighbor]->neighbors[i].erase(nodes[deleteNeighbor]->neighbors[i].begin() + k);
+                            break;
+                        }
+                    }
+                    nodes[w[j]]->neighbors[i] = temp;
                 }
             }
         }
@@ -185,7 +196,7 @@ namespace HNSWLab
                     {
                         w.push(std::make_pair(dis, id));
                     }
-                    else if (dis <= f.first)
+                    else if (dis < w.top().first)
                     {
                         w.pop();
                         w.push(std::make_pair(dis, id));
@@ -206,7 +217,7 @@ namespace HNSWLab
         return res;
     }
 
-    std::vector<int> HNSW::select_neighbors(const int *item, const std::vector<int> &w, int ef, int level)
+    std::vector<int> HNSW::select_neighbors(const int *item, std::vector<int> &w, int ef, int level)
     {
         auto compare = [](const std::pair<long, int> &a, const std::pair<long, int> &b)
         {
@@ -220,10 +231,16 @@ namespace HNSWLab
             q.push(std::make_pair(l2distance(item, nodes[w[i]]->data, dim), w[i]));
         }
         std::vector<int> res;
+        w.clear();
         while (!q.empty() && res.size() < ef)
         {
             //  std::cout<<q.top().first<<std::endl;
             res.push_back(q.top().second);
+            w.push_back(q.top().second);
+            q.pop();
+        }
+        while(!q.empty()){
+            w.push_back(q.top().second);
             q.pop();
         }
         // std::cout<<std::endl;
